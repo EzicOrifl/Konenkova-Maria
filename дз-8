@@ -1,0 +1,208 @@
+#include <iostream>
+#include <string>
+#include <vector> 
+
+using namespace std;
+
+struct Point 
+{
+    double x, y;
+    Point(double x = 0, double y = 0): x(x), y(y) {}
+};
+
+class Rectangle 
+{
+    private:
+        double width;
+        double height;
+        Point bottomLeft;
+
+        static int rectangleCount;
+
+        mutable double area;
+        mutable bool areaValid = false;
+
+        bool validateDimensions() const 
+        {
+            return width > 0 && height > 0;
+        }
+
+    public:
+        Rectangle(double width, double height, Point bottomLeft = Point(0, 0)): width(width), height(height), bottomLeft(bottomLeft) 
+        {
+            if (validateDimensions()) cout << "создайте a " << *this;
+            else 
+            {
+                this->width = 1; this->height = 1;
+                cout << "мне не нравиться>:(! создай нормальное a " << *this;
+            }
+            rectangleCount++;
+        }
+
+        Rectangle(): Rectangle(1, 1, Point(0, 0)) {}
+
+        Rectangle(double width, double height, double x, double y): Rectangle(width, height, Point(x, y)) {}
+
+        Rectangle(double size, double x, double y): Rectangle(size, size, Point(x, y)) {}
+        
+        explicit Rectangle(double size, Point bottomLeft = Point(0, 0)): Rectangle(size, size, bottomLeft) {}
+
+        Rectangle(const Rectangle& other): Rectangle(other.getWidth(), other.getHeight(), other.getBottomLeft())  
+        {
+            cout << "это " << getType() << " было скопированно" << endl;
+        }
+
+        ~Rectangle() 
+        {
+            cout << "удали a " << *this;
+            rectangleCount--;
+        }
+
+        double getWidth() const 
+        {
+            return width;
+        }
+
+        double getHeight() const 
+        {
+            return height;
+        }
+
+        static int getRectangleCount() 
+        {
+            return rectangleCount;
+        }
+
+        string getType() const 
+        {
+            return isSquare() ? "квадрат" : "прямоугол";
+        }
+
+        Point getBottomLeft() const 
+        {
+            return bottomLeft;
+        }
+
+        Rectangle& setWidth(double w) 
+        {
+            if (w > 0) { width = w; areaValid = false; }
+            else cout << "ошибка! длина не может быть 0" << endl;
+            return *this;
+        }
+
+        Rectangle& setHeight(double h) 
+        {
+            if (h > 0) { height = h; areaValid = false; }
+            else cout << "ошибка! высота не может быть 0" << endl;
+            return *this;
+        }
+
+        Rectangle& resize(double w, double h) 
+        {
+            return this->setWidth(w).setHeight(h);
+        }
+
+        Rectangle& moveTo(double x, double y) 
+        {
+            bottomLeft.x = x; bottomLeft.y = y;
+            return *this;
+        }
+
+        Rectangle& scale(double factor) 
+        {
+            if (factor > 0) 
+            {
+                height *= factor;
+                width *= factor;
+                areaValid = false;
+            } else cout << "ошибка! у тебя как получился квадрат со стороной 0 или меньше " << endl;
+            return *this;
+        }
+
+        double getArea() const 
+        {
+            if (!areaValid) 
+            {
+                area = width * height;
+                areaValid = true;
+            }
+            return area;
+        }
+
+        double perimeter() const 
+        {
+            return 2 * (width + height);
+        }
+
+        bool isSquare() const 
+        {
+            return width == height;
+        }
+
+        int compare(const Rectangle& other) const 
+        {
+            if (getArea() > other.getArea()) return 1;
+            if (getArea() < other.getArea()) return -1;
+            return 0;
+        }
+
+        bool isRotated(const Rectangle& other) const 
+        {
+            return width == other.getHeight() && height == other.getWidth();
+        }
+
+        bool operator==(const Rectangle& other) 
+        {
+            return width == other.getWidth() && height == other.getHeight();
+        }
+
+        Rectangle operator()(double scale) const 
+        {
+            return Rectangle(width * scale, height * scale, bottomLeft);
+        }
+
+        friend ostream& operator<<(ostream& os, const Rectangle& rect);
+
+        Rectangle& swapHW() 
+        {
+            double t = height;
+            height = width;
+            width = t;
+            return *this;
+        }
+
+        bool contains(const Point& p) const
+        {
+            return (bottomLeft.x < p.x && p.x < bottomLeft.x + width) && (bottomLeft.y < p.y && p.y < bottomLeft.y + height);
+        }
+
+        vector<Point> getAllCorners() const 
+        {
+            vector<Point> r;
+            r.push_back(bottomLeft);
+            r.push_back(Point(bottomLeft.x + width, bottomLeft.y));
+            r.push_back(Point(bottomLeft.x, bottomLeft.y + height));
+            r.push_back(Point(bottomLeft.x + width, bottomLeft.y + height));
+            return r;
+        }
+
+        bool intersects(const Rectangle& other) const 
+        {
+            Rectangle bound(width + other.getWidth(), height + other.getHeight(), bottomLeft.x - other.getBottomLeft().x, bottomLeft.y - other.getBottomLeft().y);
+            return bound.contains(other.getBottomLeft());
+        }
+};
+
+ostream& operator<<(ostream& os, const Rectangle& rect) 
+{
+    os << rect.getType() << ": " << rect.width << "x" << rect.height << " | позиция: (" << rect.bottomLeft.x << ", " << rect.bottomLeft.y << ")" << endl;
+    return os;
+}
+
+int Rectangle::rectangleCount = 0;
+
+int main() 
+{
+    setlocale(LC_ALL, "Russian");  
+    return 0;
+}
