@@ -1,0 +1,167 @@
+#include <iostream>
+#include <limits>
+#include <cassert>
+#include <math.h>
+
+using namespace std;
+
+class Vector3D 
+{
+    private:
+        double x, y, z;
+        mutable double cachedMagnitude;
+        mutable bool cacheValid{false};
+        static int vectorsCount;
+
+    public:
+        explicit Vector3D(double x = 0, double y = 0, double z = 0): x(x), y(y), z(z) { vectorsCount++;} 
+
+        ~Vector3D() { vectorsCount--;}
+
+        double getMagnitude() const 
+        {
+            if (!cacheValid) {
+                cachedMagnitude = pow(x * x + y * y + z * z, 1/2);
+                cacheValid = true;
+            }
+            return cachedMagnitude;
+        }
+
+        Vector3D normalize() const { return Vector3D(x / getMagnitude(), y / getMagnitude(), z / getMagnitude());}
+
+        static double dotProduct(const Vector3D& a, const Vector3D& b) { return a.x * b.x + a.y * b.y + a.z * b.z;}
+
+        bool operator()(double value) const 
+        {
+            return 
+                   abs(x - value) < numeric_limits<double>::epsilon() ||
+                   abs(y - value) < numeric_limits<double>::epsilon() ||
+                   abs(z - value) < numeric_limits<double>::epsilon();
+        }
+
+        Vector3D operator+(const Vector3D& other) const { return Vector3D(x + other.x, y + other.y, z + other.z);}
+
+        Vector3D operator-(const Vector3D& other) const { return Vector3D(x - other.x, y - other.y, z - other.z);}
+
+        Vector3D operator*(double scale) const { return Vector3D(x * scale, y * scale, z * scale);}
+
+        bool operator==(const Vector3D& other) const 
+        {
+            return abs(x - other.x) < numeric_limits<double>::epsilon() &&
+                   abs(y - other.y) < numeric_limits<double>::epsilon() &&
+                   abs(z - other.z) < numeric_limits<double>::epsilon();
+        }
+
+        bool operator!=(const Vector3D& other) const { return !(*this == other);}
+
+        friend ostream& operator<<(ostream& os, const Vector3D& vector);
+        friend class Vector3DTest;
+};
+
+class Vector3DTest {
+    private:
+        static bool validateComponent(double component) {return (component == component) && (component - component == component - component);}
+
+    public:
+        static void testStaticCounter() 
+        {
+            assert(Vector3D::vectorsCount == 0);
+            Vector3D* testVector = new Vector3D();
+            assert(Vector3D::vectorsCount == 1);
+            delete testVector;
+            assert(Vector3D::vectorsCount == 0);
+        }
+
+        static void testCachingMechanism() 
+        {
+            Vector3D testVector = Vector3D(2, 3, 6);
+            double magnitude  = testVector.getMagnitude();
+            assert(magnitude == 7);
+            double magnitudeC  = testVector.getMagnitude();
+            assert(magnitudeC == 7);
+            testVector = testVector * 2;
+            double magnitudeM = testVector.getMagnitude();
+            assert(magnitudeM == 14);
+        }
+
+        static void testVectorAddition() 
+        {
+            Vector3D v1 = Vector3D(1, 2, 3);
+            Vector3D v2 = Vector3D(5, 7, 9);
+            Vector3D sumCalc = v1 + v2; Vector3D sum = Vector3D(6, 9, 12);
+            assert(sum == sumCalc);
+        }
+
+        static void testVectorSubstraction() 
+        {
+            Vector3D v1 = Vector3D(1, 2, 3);
+            Vector3D v2 = Vector3D(5, 7, 9);
+            Vector3D subCalc = v1 - v2; Vector3D sub = Vector3D(-4, -5, -6);
+            assert(sub == subCalc);
+        }
+
+        static void testScalarMultiplication() 
+        {
+            Vector3D v1 = Vector3D(1, 2, 3);
+            Vector3D mulCalc = v1 * 3; Vector3D mul = Vector3D(3, 6, 9);
+            assert(mul == mulCalc);
+        }
+
+        static void testDotProduct() 
+        {
+            Vector3D v1 = Vector3D(1, 2, 3);
+            Vector3D v2 = Vector3D(5, 7, 9);
+            assert(Vector3D::dotProduct(v1, v2) == 1 * 5 + 2 * 7 + 3 * 9);
+        }
+
+        static void testNormalization() 
+        {
+            Vector3D v1 = Vector3D(1, 2, 3);
+            Vector3D n;
+            n = v1.normalize();
+            assert(n.getMagnitude() == 1);
+        }
+
+        static void testFunctionalObject() 
+        {
+            Vector3D v1 = Vector3D(1, 2, 3);
+            assert(v1(2));
+            assert(!v1(5));
+
+        }
+        
+        static void testEqualityOperators() 
+        {
+            Vector3D v1 = Vector3D(1, 2, 3);
+            Vector3D v2 = Vector3D(2, 4, 6);
+            assert(v1 != v2);
+            assert(v1 == v2 * 0.5);
+        }
+
+        static void testAll() 
+        {
+            testEqualityOperators();
+            testStaticCounter();
+            testVectorAddition();
+            testVectorSubstraction();
+            testScalarMultiplication();
+            testDotProduct();
+            testCachingMechanism();
+            testNormalization();
+            testFunctionalObject();
+            cout << "\n работает все" << endl;
+        }
+};
+
+ostream& operator<<(ostream& os, const Vector3D& vector) {
+    os << "(" << vector.x << ", " << vector.y << ", " << vector.x << ")";
+    return os;
+}
+
+int Vector3D::vectorsCount = 0;
+
+int main() {
+    setlocale(LC_ALL, "Russian");
+    Vector3DTest::testAll();
+    return 0;
+}
