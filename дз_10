@@ -1,0 +1,207 @@
+#include <iostream>
+#include <string>
+#include <vector>
+#include <memory>
+
+using namespace std;
+
+class Vehicle 
+{
+protected:
+    string make;
+    string model;
+    int year;
+    double fuelEfficiency; 
+
+    Vehicle(const  string& make, const  string& model, int year, double fuelEfficiency)
+        : make(make), model(model), year(year), fuelEfficiency(fuelEfficiency) {}
+
+public:
+    virtual void startEngine() = 0;
+    virtual void stopEngine() = 0;
+    virtual  string getDescription() const = 0;
+    virtual double calculateRange(double fuelAmount) const = 0;
+    
+    virtual ~Vehicle() = default;
+    
+     string getMake() const { return make; }
+     string getModel() const { return model; }
+    int getYear() const { return year; }
+    double getFuelEfficiency() const { return fuelEfficiency; }
+    
+    friend  ostream& operator<<( ostream& os, const Vehicle& vehicle) 
+    {
+        os << vehicle.getDescription();
+        return os;
+    }
+};
+
+
+class Car : public Vehicle 
+{
+private:
+    int numberOfDoors;
+    double trunkCapacity; 
+
+public:
+    Car(const  string& make, const  string& model, int year, 
+        double fuelEfficiency, int numberOfDoors, double trunkCapacity)
+        : Vehicle(make, model, year, fuelEfficiency), 
+          numberOfDoors(numberOfDoors), trunkCapacity(trunkCapacity) {}
+
+    void startEngine() override 
+    {
+        cout << "Автомобиль " << make << " " << model << "врум-врум" << endl;
+    }
+
+    void stopEngine() override 
+    {
+        cout << "автомобиль " << make << " " << model << "не врум-врум(((" << endl;
+    }
+
+    string getDescription() const override 
+    {
+        return "автомобиль: " + make + " " + model + " (" + to_string(year) + 
+               "), двери: " + to_string(numberOfDoors) + 
+               ", багажник: " + to_string(trunkCapacity) + "метры в кубе";
+    }
+
+    double calculateRange(double fuelAmount) const override 
+    {
+        return fuelAmount * fuelEfficiency;
+    }
+
+    void openTrunk() 
+    {
+        cout << "багажник" << make << " " << model << " открыт. объем: " << trunkCapacity << "метры в кубе" << endl;
+    }
+    
+    int getNumberOfDoors() const { return numberOfDoors; }
+    double getTrunkCapacity() const { return trunkCapacity; }
+};
+
+
+class Truck : public Vehicle 
+{
+private:
+    double cargoCapacity;
+    bool hasTrailer;
+
+public:
+    Truck(const string& make, const string& model, int year, 
+          double fuelEfficiency, double cargoCapacity, bool hasTrailer)
+        : Vehicle(make, model, year, fuelEfficiency), 
+          cargoCapacity(cargoCapacity), hasTrailer(hasTrailer) {}
+
+    void startEngine() override 
+    {
+        cout << "грузовик " << make << " " << model << "едет" << endl;
+    }
+
+    void stopEngine() override 
+    {
+        cout << "грузовик " << make << " " << model << "не едет" << endl;
+    }
+
+    string getDescription() const override 
+    {
+        string trailerInfo = hasTrailer ? "с прицепом" : "без прицепа";
+        return "грузовик: " + make + " " + model + " (" + to_string(year) + 
+               "), грузоподъемность: " + to_string(cargoCapacity) + 
+               " т, " + trailerInfo;
+    }
+
+    double calculateRange(double fuelAmount) const override 
+    {
+        return fuelAmount * fuelEfficiency * 0.8;
+    }
+
+void loadCargo() 
+{
+        cout << "грузовик " << make << " " << model << "загружен. Грузоподъемность: " 
+                  << cargoCapacity << " т" << endl;
+    }
+    
+    double getCargoCapacity() const { return cargoCapacity; }
+    bool getHasTrailer() const { return hasTrailer; }
+};
+
+
+class Motorcycle : public Vehicle 
+{
+private:
+    int engineSizeCC;
+    bool hasSideCar;
+
+public:
+    Motorcycle(const string& make, const string& model, int year, 
+               double fuelEfficiency, int engineSizeCC, bool hasSideCar)
+        : Vehicle(make, model, year, fuelEfficiency), 
+          engineSizeCC(engineSizeCC), hasSideCar(hasSideCar) {}
+
+    void startEngine() override 
+    {
+        cout << "мотоцикл " << make << " " << model << "вжжжжж!" << endl;
+    }
+
+    void stopEngine() override 
+    {
+        cout << "мотоцикл " << make << " " << model << "не вжжжжж((((( " << endl;
+    }
+
+    string getDescription() const override 
+    {
+        string sideCarInfo = hasSideCar ? "с люлькой" : "без люльки";
+        return "мотоцикл: " + make + " " + model + " (" + to_string(year) + 
+               "), объем двигателя: " + to_string(engineSizeCC) + 
+               " см³, " + sideCarInfo;
+    }
+
+    double calculateRange(double fuelAmount) const override 
+    {
+        return fuelAmount * fuelEfficiency * 1.2;
+    }
+
+    void performWheelie() 
+    {
+        cout << "мотоцикл " << make << " " << model << " выполняет вилли!" << endl;
+    }
+    
+    int getEngineSizeCC() const { return engineSizeCC; }
+    bool getHasSideCar() const { return hasSideCar; }
+};
+
+
+
+int main() 
+{
+
+    cout << "--- Демонстрация транспортных средств ---" << endl << endl;
+    
+    Car car("Geely", "OKAVANGO NEW", 2022, 12.5, 4, 450.0); //самая смешная авто компания
+    Truck truck("Volvo", "coca-cola truck", 2020, 5.8, 20.0, true);
+    Motorcycle motorcycle("Kawasaki", "Kawasaki", 2021, 18.0, 1200, false);
+    
+
+    cout << " ---информация о транспортных средствах---" << endl;
+    cout << car << endl;
+    cout << truck << endl;
+    cout << motorcycle << endl;
+    
+    cout << "\n ---пошумим!!---" << endl;
+    car.startEngine();
+    truck.startEngine();
+    motorcycle.startEngine();
+    
+    cout << "\n --- расчет дальности (при 1 стержне уранового топлива, равному 50 литрам обычного):" << endl;
+    cout << "автомобиль: " << car.calculateRange(50) << " км" << endl;
+    cout << "грузовик: " << truck.calculateRange(50) << " км" << endl;
+    cout << "мотоцикл: " << motorcycle.calculateRange(50) << " км" << endl;
+    
+    cout << "\n ---прикольчики---" << endl;
+    car.openTrunk();
+    truck.loadCargo();
+    motorcycle.performWheelie();
+    
+    cout << "\n ---управление через вектор---" << endl;
+}
