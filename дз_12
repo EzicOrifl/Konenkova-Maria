@@ -1,0 +1,269 @@
+#include <iostream>
+#include <stdexcept>    
+#include <cstring>
+
+using namespace std;
+
+class SafeArray 
+{
+private:
+    int* data;
+    size_t size;
+   
+    
+    void copyFrom(const SafeArray& other) 
+    {
+        if (other.data != nullptr && other.size > 0) 
+        {
+            data = new int[other.size];
+            size = other.size;
+            copy(other.data, other.data + other.size, data);
+        }
+         else 
+        {
+            data = nullptr;
+            size = 0;
+        }
+    }
+
+    
+    void cleanup() 
+    {
+        delete[] data;
+        data = nullptr;
+        size = 0;
+    }
+
+public:
+    
+    explicit SafeArray(size_t initialSize) : data(nullptr), size(0) 
+    {
+        if (initialSize <= 0) 
+        {
+            throw invalid_argument("размер больше 0");
+        }
+        data = new int[initialSize];
+        size = initialSize;
+        
+        
+        fill(data, data + size, 0);
+    }
+
+  
+    ~SafeArray() {
+        cleanup();
+    }
+
+
+    SafeArray(const SafeArray& other) : data(nullptr), size(0) 
+    {
+        copyFrom(other);
+    }
+
+
+    SafeArray& operator=(const SafeArray& other) 
+    {
+        if (this != &other) 
+        {
+            SafeArray temp(other);
+            swap(data, temp.data);
+            swap(size, temp.size);
+        }
+        return *this;
+    }
+
+    int& operator[](size_t index) 
+    {
+        if (index >= size) 
+        {
+            throw out_of_range("в границах массива пж");
+        }
+        return data[index];
+    }
+
+
+    const int& operator[](size_t index) const 
+    {
+        if (index >= size) 
+        {
+            throw out_of_range("в границах массива пж");
+        }
+        return data[index];
+    }
+
+    void resize(size_t newSize) 
+    {
+        if (newSize > 1000) 
+        {
+            throw length_error("поменьше пж");
+        }
+        
+        if (newSize <= 0) 
+        {
+            throw invalid_argument("размер больше 0");
+        }
+
+        if (newSize == size) 
+        {
+            return;
+        }
+
+        int* newData = new int[newSize];
+        
+
+        size_t copySize = min(size, newSize);
+        for (size_t i = 0; i < copySize; ++i) 
+        {
+            newData[i] = data[i];
+        }
+        
+        for (size_t i = copySize; i < newSize; ++i) 
+        {
+            newData[i] = 0;
+        }
+
+        delete[] data;
+        data = newData;
+        size = newSize;
+    }
+
+    size_t getSize() const 
+    {
+        return size;
+    }
+
+    void fill(int value) 
+    {
+        fill(data, data + size, value);
+    }
+
+    void print() const 
+    {
+        cout << "[";
+        for (size_t i = 0; i < size; ++i) 
+        {
+            cout << data[i];
+            if (i < size - 1) 
+            {
+                cout << ", ";
+            }
+        }
+        cout << "]" << endl;
+    }
+};
+
+void testExceptions() 
+{
+    cout << "тест исключений" << endl;
+
+    cout << " тест с размером <= 0:" << endl;
+    try 
+    {
+        SafeArray arr(0);
+    } 
+    catch (const invalid_argument& e) 
+    {
+        cout << "исключение: " << e.what() << endl;
+    }
+    
+    cout << " тест за границами:" << endl;
+    try 
+    {
+        SafeArray arr(5);
+        arr[10] = 42; 
+    } 
+    catch (const out_of_range& e) {
+        cout << "исключение: " << e.what() << endl;
+    }
+    
+
+    cout << " тест  больше 1000:" << endl;
+    try 
+    {
+        SafeArray arr(10);
+        arr.resize(1500); 
+    } 
+    catch (const length_error& e) 
+    {
+        cout << "исключение: " << e.what() << endl;
+    }
+    
+
+    cout << " тест копирования и присваивания:" << endl;
+    try 
+    {
+        SafeArray arr1(5);
+        arr1.fill(10);
+        
+        SafeArray arr2 = arr1;
+        cout << "arr2 после копирования: ";
+        arr2.print();
+        
+        SafeArray arr3(3);
+        arr3 = arr1;
+        cout << "arr3 после присваивания: ";
+        arr3.print();
+        
+    } 
+    catch (const exception& e) 
+    {
+        cout << "исключение: " << e.what() << endl;
+    }
+    
+
+    cout << " тест корректных операций:" << endl;
+    try 
+    {
+        SafeArray arr(3);
+        arr[0] = 1;
+        arr[1] = 2;
+        arr[2] = 3;
+        
+        cout << "Исходный массив: ";
+        arr.print();
+        
+        arr.resize(5);
+        arr[3] = 4;
+        arr[4] = 5;
+        
+        cout << "Массив после resize(5): ";
+        arr.print();
+        
+    } 
+    catch (const exception& e) 
+    {
+        cout << "исключение: " << e.what() << endl;
+    }
+    
+
+    cout << " тест самоприсваивания:" << endl;
+    try 
+    {
+        SafeArray arr(3);
+        arr.fill(7);
+        arr = arr;
+        
+        cout << "Массив после самоприсваивания: ";
+        arr.print();
+        
+    } catch (const exception& e) 
+    {
+        cout << "исключение: " << e.what() << endl;
+    }
+}
+
+int main() 
+{
+    try
+    {
+        testExceptions();
+        cout << " все!" << endl;
+    } 
+    catch (const exception& e) 
+    {
+        cerr << "исключение:  " << e.what() << endl;
+        return 1;
+    }
+    
+    return 0;
+}
