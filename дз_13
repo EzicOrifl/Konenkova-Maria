@@ -1,0 +1,329 @@
+#include <iostream>
+#include <stdexcept>
+#include <cstring>
+
+using namespace std;
+
+template<typename T, int Capacity>
+class Stack {
+private:
+    T data[Capacity]; 
+    int topIndex;     
+public:
+   
+    Stack() : topIndex(-1) 
+    {
+        static_assert(Capacity > 0, " больше 0");
+    }
+
+
+    void push(const T& value) 
+    {
+        if (full()) 
+        {
+            throw overflow_error("стек полон");
+        }
+        data[++topIndex] = value;
+    }
+
+
+    T pop() 
+    {
+        if (empty()) 
+        {
+            throw underflow_error("стек пуст");
+        }
+        return data[topIndex--];
+    }
+
+    const T& top() const {
+
+        if (empty()) 
+        {
+            throw out_of_range("стек пуст");
+        }
+        return data[topIndex];
+    }
+
+
+    bool empty() const 
+    {
+        return topIndex == -1;
+    }
+
+    bool full() const 
+    {
+        return topIndex == Capacity - 1;
+    }
+
+
+    int size() const 
+    {
+        return topIndex + 1;
+    }
+
+
+    int capacity() const 
+    {
+        return Capacity;
+    }
+
+    void clear() 
+    {
+        topIndex = -1;
+    }
+
+
+    void print() const 
+    {
+        cout << "Stack (размер: " << size() << ", вместимость: " << Capacity << "): [";
+        for (int i = 0; i <= topIndex; ++i) 
+        {
+            cout << data[i];
+            if (i < topIndex) 
+            {
+                cout << ", ";
+            }
+        }
+        cout << "]" << endl;
+    }
+};
+
+template<int Capacity>
+class Stack<const char*, Capacity> 
+{
+private:
+    const char* data[Capacity]; 
+    int topIndex;
+
+    static char* copyString(const char* str) 
+    {
+        if (!str) return nullptr;
+        char* newStr = new char[strlen(str) + 1];
+        strcpy(newStr, str);
+        return newStr;
+    }
+
+public:
+    Stack() : topIndex(-1) 
+    {
+        static_assert(Capacity > 0, "емкость должна быть больше 0");
+        for (int i = 0; i < Capacity; ++i) 
+        {
+            data[i] = nullptr;
+        }
+    }
+
+    ~Stack() 
+    {
+        clear();
+    }
+
+
+    Stack(const Stack& other) : topIndex(other.topIndex) 
+    {
+        for (int i = 0; i <= topIndex; ++i) 
+        {
+            data[i] = other.data[i] ? copyString(other.data[i]) : nullptr;
+        }
+        for (int i = topIndex + 1; i < Capacity; ++i) 
+        {
+            data[i] = nullptr;
+        }
+    }
+
+ 
+    Stack& operator=(const Stack& other) 
+    {
+        if (this != &other) 
+        {
+            clear();
+            topIndex = other.topIndex;
+            for (int i = 0; i <= topIndex; ++i) 
+            {
+                data[i] = other.data[i] ? copyString(other.data[i]) : nullptr;
+            }
+        }
+        return *this;
+    }
+
+    void push(const char* value) 
+    {
+        if (full()) 
+        {
+            throw overflow_error("стек полон");
+        }
+        data[++topIndex] = copyString(value);
+    }
+
+    const char* pop() 
+    {
+        if (empty()) 
+        {
+            throw underflow_error("стек пуст");
+        }
+        const char* result = data[topIndex];
+        data[topIndex] = nullptr;
+        topIndex--;
+        return result;
+    }
+
+    const char* top() const 
+    {
+        if (empty()) 
+        {
+            throw out_of_range("стек пуст");
+        }
+        return data[topIndex];
+    }
+
+    bool empty() const 
+    {
+        return topIndex == -1;
+    }
+
+
+bool full() const 
+{
+        return topIndex == Capacity - 1;
+    }
+
+    int size() const 
+    {
+        return topIndex + 1;
+    }
+
+    int capacity() const 
+    {
+        return Capacity;
+    }
+
+    void clear() 
+    {
+        for (int i = 0; i <= topIndex; ++i) 
+        {
+            delete[] data[i];
+            data[i] = nullptr;
+        }
+        topIndex = -1;
+    }
+
+    void print() const 
+    {
+        cout << "Stack (размер: " << size() << ", вместимость: " << Capacity << "): [";
+        for (int i = 0; i <= topIndex; ++i) 
+        {
+            cout << "\"" << data[i] << "\"";
+            if (i < topIndex) 
+            {
+                cout << ", ";
+            }
+        }
+        cout << "]" << endl;
+    }
+};
+
+
+template<typename T, int Capacity>
+void testStack() 
+{
+
+    cout << " тест Stack" << typeid(T).name()  << Capacity  << endl;
+    
+    Stack<T, Capacity> stack;
+
+    cout << " пустой стек" << endl;
+    cout << "Размер: " << stack.size() << endl;
+    cout << "Пуст? " << (stack.empty() ? "Да" : "Нет") << endl;
+    cout << "Полон? " << (stack.full() ? "Да" : "Нет") << endl;
+
+    cout << " добавление элементов:" << endl;
+    for (int i = 1; i <= 3 && i <= Capacity; ++i) {
+        stack.push(static_cast<T>(i * 10));
+        cout << "добавлен: " << i * 10 << ", самый верхний элемент наверху: " << stack.top() << endl;
+    }
+    stack.print();
+
+    cout << " удаление элементов:" << endl;
+    while (!stack.empty()) {
+        cout << "удален: " << stack.pop() << ", размер: " << stack.size() << endl;
+    }
+
+    cout << " обработка ошибок:" << endl;
+    
+
+    try {
+        stack.pop();
+    } catch (const underflow_error& e) {
+        cout << "исключение: " << e.what() << endl;
+    }
+
+    try {
+        stack.top();
+    } catch (const out_of_range& e) {
+        cout << "исключение: " << e.what() << endl;
+    }
+
+    cout << " предел:" << endl;
+    for (int i = 0; i < Capacity; ++i) {
+        stack.push(static_cast<T>(i + 1));
+    }
+    cout << "размер: " << stack.size() << ", полон? " << (stack.full() ? "Да" : "Нет") << endl;
+
+    try {
+        stack.push(static_cast<T>(999));
+    } catch (const overflow_error& e) {
+        cout << "исключение: " << e.what() << endl;
+    }
+    
+    stack.clear();
+    cout << "очищен, размер: " << stack.size() << endl;
+}
+
+void testStringStack() 
+{
+    cout << " тест Stack<const char*, 5>" << endl;
+    
+    Stack<const char*, 5> stack;
+
+    stack.push("Hello");
+    stack.push("World");
+    stack.push("C++");
+    
+    cout << "содержаниеЖ" << endl;
+    stack.print();
+    
+    cout << " верхний элемент: " << stack.top() << endl;
+
+    char* str = const_cast<char*>(stack.pop());
+    cout << "удален: " << str << endl;
+    delete[] str;
+    
+    stack.print();
+    stack.clear();
+}
+
+int main() 
+{
+
+    try 
+    {
+
+        testStack<int, 5>();
+        
+        testStack<double, 3>();
+
+        testStack<char, 4>();
+        
+        testStringStack();
+        
+        cout << " все" << endl;
+        
+    } catch (const exception& e) 
+    {
+        cerr << "исключение:" << e.what() << endl;
+        return 1;
+    }
+    
+    return 0;
+}
