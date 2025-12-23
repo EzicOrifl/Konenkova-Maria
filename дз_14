@@ -1,0 +1,39 @@
+class LRUCache 
+{
+private:
+   list<pair<int, int>> prior_list;
+   int maxCapacity;
+   unordered_map<int, list<pair<int, int>>::iterator> tree;
+public:
+    LRUCache(int capacity): maxCapacity(capacity) {}
+  
+    int get(int key) 
+    {
+        if (tree.find(key) == tree.end()) 
+        {
+            return -1;
+        }
+        prior_list.splice(prior_list.begin(), prior_list, tree[key]);
+        return tree[key]->second;
+    }
+  
+    void put(int key, int value) 
+    {
+        if (tree.find(key) != tree.end()) 
+        {
+            prior_list.splice(prior_list.begin(), prior_list, tree[key]);
+            tree[key]->second = value;
+        } 
+        else 
+        {
+            prior_list.push_front({key, value});
+            tree[key] = prior_list.begin();
+          
+            if (prior_list.size() > maxCapacity) 
+            {
+                tree.erase(prior_list.back().first);
+                prior_list.pop_back();
+            }
+        }
+    }
+};
