@@ -1,0 +1,55 @@
+#include <iostream>
+
+using namespace std;
+
+//шаблон
+template<typename T>
+class Printer {
+public:
+    void print(const T& value) const {
+        cout << "value: " << value << endl;
+    }
+};
+
+//полная специализация
+template<>
+class Printer<bool> {
+public:
+    void print(bool value) const {
+        cout << (value ? "true" : "false") << endl;
+    }
+};
+
+//частичная специализация для T*
+template<typename T>
+class Printer<T*> {
+public:
+    void print(const T* ptr) const {
+        if (ptr) {
+            cout << "address: " << ptr << " value: " << *ptr << endl;
+        } else {
+            cout << "address: nullptr" << endl;
+        }
+    }
+};
+
+// Пример использования
+int main() {
+
+    Printer<int> p1;
+    p1.print(42); 
+    
+    Printer<bool> p2;
+    p2.print(true); 
+    p2.print(false);
+    
+ 
+    int x = 100;
+    Printer<int*> p3;
+    p3.print(&x); 
+    
+    int* null_ptr = nullptr;
+    p3.print(null_ptr);
+    
+    return 0;
+}
