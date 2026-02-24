@@ -1,0 +1,153 @@
+#include <iostream>
+#include <type_traits>
+
+//это главный
+class Animal {
+public:
+    virtual ~Animal() = default;
+    
+    virtual void makeSound() const {
+        std::cout << "звуки" << std::endl;
+    }
+    
+    virtual void move() const {
+        std::cout << "бег" << std::endl;
+    }
+};
+
+//это подтип
+class Cat : public Animal {
+public:
+    void makeSound() const override {
+        std::cout << "мяу мяу" << std::endl;
+    }
+    
+    void move() const override {
+        std::cout << "кошка кошится" << std::endl;
+    }
+};
+
+//это подтип
+class Dog : public Animal {
+public:
+    void makeSound() const override {
+        std::cout << "гав гав" << std::endl;
+    }
+    
+    void move() const override {
+        std::cout << "собачка собачится" << std::endl;
+    }
+};
+
+//это подтип
+class Bird : public Animal {
+public:
+    void makeSound() const override {
+        std::cout << "чирик" << std::endl;
+    }
+    
+    void move() const override {
+        std::cout << "птица птициться" << std::endl;
+    }
+};
+
+//другой класс
+class Car {
+public:
+    void drive() const {
+        std::cout << "авто автиться" << std::endl;
+    }
+};
+
+
+
+template<typename T>
+void feedAnimal(const T& creature) {
+    std::cout << "кушать: ";
+    
+    if constexpr (std::is_base_of_v<Animal, T>) {
+        std::cout << "животное";
+        creature.makeSound();
+        std::cout << "ест" << std::endl;
+    } else {
+        
+        std::cout << "не животное" << std::endl;
+    }
+}
+
+template<typename T>
+void checkAnimalType(const T& creature) {
+    static_assert(std::is_base_of_v<Animal, T>, 
+                  "не явл животным");
+    
+    std::cout << "явл животным";
+    creature.makeSound();
+    creature.move();
+}
+
+
+int main() {
+    
+    Cat cat;
+    Dog dog;
+    Bird bird;
+    Car car;
+    
+    std::cout << "\n кот: ";
+    cat.makeSound();
+    std::cout << "кот жвиж: ";
+    cat.move();
+    
+    std::cout << "\n пес: ";
+    dog.makeSound();
+    std::cout << "пес двих: ";
+    dog.move();
+    
+    std::cout << "\n птиц: ";
+    bird.makeSound();
+    std::cout << "птиц жвиж: ";
+    bird.move();
+    
+    std::cout << "\n авто: ";
+    car.drive();
+    
+    //////////////////////////////////////////////////
+    std::cout << "\n тест еды кота" << std::endl;
+    feedAnimal(cat);
+    
+    std::cout << "\n тест еды пса" << std::endl;
+    feedAnimal(dog);
+    
+    std::cout << "\n тест еды птиц" << std::endl;
+    feedAnimal(bird);
+    
+    std::cout << "\n машина" << std::endl;
+    feedAnimal(car);
+    
+
+    /////////////////////////////////////////////////
+    std::cout << "\n кот животное?" << std::endl;
+    checkAnimalType(cat);  
+    
+    std::cout << "\n пес животное?" << std::endl;
+    checkAnimalType(dog);  
+    
+    std::cout << "\n птиц животное?" << std::endl;
+    checkAnimalType(bird); 
+    
+    /*
+    std::cout << "\n авто животное?" << std::endl;
+    checkAnimalType(car);  // Ошибка компиляции: static_assert failed
+    */
+    
+    
+    Animal* animals[] = {&cat, &dog, &bird};
+    
+    for (const auto& animal : animals) {
+        std::cout << "\n тварь без пары: ";
+        animal->makeSound();
+        animal->move();
+    }
+    
+    return 0;
+}
