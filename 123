@@ -1,0 +1,376 @@
+#include <iostream>
+#include <memory>
+#include <string>
+
+using namespace std;
+
+// ==================== Интерфейсы ====================
+
+/**
+ * Интерфейс атаки (Bridge: реализация)
+ */
+class IAttack {
+public:
+    virtual ~IAttack() = default;
+    virtual void execute() const = 0;
+    virtual string getName() const = 0;
+};
+
+/**
+ * Интерфейс персонажа (Bridge: абстракция)
+ */
+class ICharacter {
+public:
+    virtual ~ICharacter() = default;
+    virtual string getName() const = 0;
+    virtual void attack() const = 0;
+    virtual void setAttack(shared_ptr<IAttack> attack) = 0;
+};
+
+// ==================== Реализации атак ====================
+
+/**
+ * Пример: атака мечом
+ */
+class SwordAttack : public IAttack {
+public:
+    void execute() const override {
+        cout << "⚔️ Наносит рубящий удар мечом! Наносит 50 урона." << endl;
+    }
+    
+    string getName() const override {
+        return "Меч";
+    }
+};
+
+/**
+ * Огненная атака
+ */
+class FireAttack : public IAttack {
+public:
+    void execute() const override {
+        cout << "🔥 Выпускает огненный шар! Наносит 45 урона и поджигает цель." << endl;
+    }
+    
+    string getName() const override {
+        return "Огненная атака";
+    }
+};
+
+/**
+ * Ледяная атака
+ */
+class IceAttack : public IAttack {
+public:
+    void execute() const override {
+        cout << "❄️ Выпускает ледяную стрелу! Наносит 40 урона и замораживает цель." << endl;
+    }
+    
+    string getName() const override {
+        return "Ледяная атака";
+    }
+};
+
+/**
+ * Атака молнией
+ */
+class LightningAttack : public IAttack {
+public:
+    void execute() const override {
+        cout << "⚡ Призывает молнию с небес! Наносит 55 урона и оглушает цель." << endl;
+    }
+    
+    string getName() const override {
+        return "Атака молнией";
+    }
+};
+
+// ==================== Классы персонажей ====================
+
+/**
+ * Пример: Воин
+ */
+class Warrior : public ICharacter {
+private:
+    shared_ptr<IAttack> m_attack;
+    
+public:
+    Warrior() : m_attack(make_shared<SwordAttack>()) {}
+    
+    string getName() const override {
+        return "Воин";
+    }
+    
+    void setAttack(shared_ptr<IAttack> attack) override {
+        m_attack = attack;
+    }
+    
+    void attack() const override {
+        cout << "[" << getName() << "] ";
+        m_attack->execute();
+    }
+};
+
+/**
+ * Маг (персонаж, придуманный студентом)
+ */
+class Mage : public ICharacter {
+private:
+    shared_ptr<IAttack> m_attack;
+    
+public:
+    Mage() : m_attack(make_shared<FireAttack>()) {} // по умолчанию огонь
+    
+    string getName() const override {
+        return "Маг";
+    }
+    
+    void setAttack(shared_ptr<IAttack> attack) override {
+        m_attack = attack;
+    }
+    
+    void attack() const override {
+        cout << "[" << getName() << "] ";
+        m_attack->execute();
+    }
+    
+    // Уникальное поведение мага
+    void castSpell() const {
+        cout << "[" << getName() << "] ✨ Читает заклинание и восстанавливает 30 маны!" << endl;
+    }
+};
+
+/**
+ * Паладин (ещё один персонаж)
+ */
+class Paladin : public ICharacter {
+private:
+    shared_ptr<IAttack> m_attack;
+    
+public:
+    Paladin() : m_attack(make_shared<SwordAttack>()) {}
+    
+    string getName() const override {
+        return "Паладин";
+    }
+    
+    void setAttack(shared_ptr<IAttack> attack) override {
+        m_attack = attack;
+    }
+    
+    void attack() const override {
+        cout << "[" << getName() << "] ";
+        m_attack->execute();
+    }
+    
+    // Уникальное поведение паладина
+    void heal() const {
+        cout << "[" << getName() << "] 🛡️ Использует святое исцеление! Восстанавливает 50 здоровья." << endl;
+    }
+};
+
+// ==================== SecretCharacter и Proxy ====================
+
+/**
+ * Атака из тени (уникальная для SecretCharacter)
+ */
+class ShadowAttack : public IAttack {
+public:
+    void execute() const override {
+        cout << "🌑 Выскальзывает из тени и наносит смертельный удар! Наносит 80 урона." << endl;
+    }
+    
+    string getName() const override {
+        return "Атака из тени";
+    }
+};
+/**
+ * Секретный персонаж (реальный объект)
+ */
+class SecretCharacter : public ICharacter {
+private:
+    shared_ptr<IAttack> m_attack;
+    
+public:
+    SecretCharacter() : m_attack(make_shared<ShadowAttack>()) {}
+    
+    string getName() const override {
+        return "Теневой Убийца";
+    }
+    
+    void setAttack(shared_ptr<IAttack> attack) override {
+        m_attack = attack;
+    }
+    
+    void attack() const override {
+        cout << "[" << getName() << "] ";
+        m_attack->execute();
+    }
+    
+    // Уникальное поведение — атака из тени
+    void shadowStrike() const {
+        cout << "[" << getName() << "] 👻 Использует атаку из тени! Наносит 100 критического урона!" << endl;
+    }
+};
+
+/**
+ * Proxy для секретного персонажа
+ * - Проверяет уровень игрока перед созданием
+ * - Lazy initialization (создаётся при первой атаке)
+ * - Делегирует вызовы реальному объекту
+ */
+class SecretCharacterProxy : public ICharacter {
+private:
+    unique_ptr<SecretCharacter> m_realCharacter;
+    int m_playerLevel;
+    bool m_accessDeniedLogged;
+    
+    /**
+     * Проверяет возможность создания секретного персонажа
+     */
+    bool canAccess() const {
+        return m_playerLevel >= 10;
+    }
+    
+    /**
+     * Создаёт реального персонажа (lazy initialization)
+     */
+    void ensureRealCharacterCreated() {
+        if (!m_realCharacter && canAccess()) {
+            m_realCharacter = make_unique<SecretCharacter>();
+            cout << "✅ Секретный персонаж \"" << m_realCharacter->getName() 
+                 << "\" создан! (уровень игрока: " << m_playerLevel << ")" << endl;
+        }
+    }
+    
+    /**
+     * Обработка случая недостаточного уровня
+     */
+    void handleAccessDenied() const {
+        if (!m_accessDeniedLogged) {
+            cout << "⛔ Доступ запрещён! Секретный персонаж требует уровень 10. "
+                 << "Текущий уровень: " << m_playerLevel << endl;
+            const_cast<SecretCharacterProxy*>(this)->m_accessDeniedLogged = true;
+        }
+    }
+    
+public:
+    SecretCharacterProxy(int playerLevel) 
+        : m_playerLevel(playerLevel), m_accessDeniedLogged(false) {}
+    
+    string getName() const override {
+        if (!canAccess()) {
+            return "Теневой Убийца (заблокирован)";
+        }
+        return m_realCharacter ? m_realCharacter->getName() : "Теневой Убийца (не создан)";
+    }
+    
+    void setAttack(shared_ptr<IAttack> attack) override {
+        if (!canAccess()) {
+            handleAccessDenied();
+            return;
+        }
+        
+        ensureRealCharacterCreated();
+        if (m_realCharacter) {
+            m_realCharacter->setAttack(attack);
+        }
+    }
+    
+    void attack() const override {
+        if (!canAccess()) {
+            const_cast<SecretCharacterProxy*>(this)->handleAccessDenied();
+            return;
+        }
+        
+        const_cast<SecretCharacterProxy*>(this)->ensureRealCharacterCreated();
+        if (m_realCharacter) {
+            m_realCharacter->attack();
+        }
+    }
+    
+    // Уникальное поведение — атака из тени
+    void shadowStrike() const {
+        if (!canAccess()) {
+            const_cast<SecretCharacterProxy*>(this)->handleAccessDenied();
+            return;
+        }
+        
+        const_cast<SecretCharacterProxy*>(this)->ensureRealCharacterCreated();
+        if (m_realCharacter) {
+            m_realCharacter->shadowStrike();
+        }
+    }
+};
+
+// ==================== Демонстрация ====================
+
+int main() {
+    cout << "=== Демонстрация паттернов Bridge и Proxy ===" << endl << endl;
+    
+    // ========== Демонстрация Bridge ==========
+    cout << "--- Bridge: Персонажи и атаки ---" << endl;
+    
+    // Создаём персонажей
+    Warrior warrior;
+    Mage mage;
+    Paladin paladin;
+    
+    // Создаём различные типы атак
+    auto sword = make_shared<SwordAttack>();
+auto fire = make_shared<FireAttack>();
+    auto ice = make_shared<IceAttack>();
+    auto lightning = make_shared<LightningAttack>();
+    
+    // Демонстрируем разных персонажей с разными атаками
+    cout << endl << "1. Воин:" << endl;
+    warrior.attack();                    // Меч (по умолчанию)
+    warrior.setAttack(fire);
+    warrior.attack();                    // Огонь
+    
+    cout << endl << "2. Маг:" << endl;
+    mage.attack();                       // Огонь (по умолчанию)
+    mage.setAttack(ice);
+    mage.attack();                       // Лёд
+    mage.castSpell();                    // Уникальное поведение мага
+    
+    cout << endl << "3. Паладин:" << endl;
+    paladin.attack();                    // Меч (по умолчанию)
+    paladin.setAttack(lightning);
+    paladin.attack();                    // Молния
+    paladin.heal();                      // Уникальное поведение паладина
+    
+    cout << endl;
+    
+    // ========== Демонстрация Proxy ==========
+    cout << "--- Proxy: Секретный персонаж ---" << endl;
+    
+    // Игрок с уровнем 5 (недостаточно)
+    cout << endl << "1. Игрок с уровнем 5:" << endl;
+    SecretCharacterProxy proxyLowLevel(5);
+    cout << "Имя персонажа: " << proxyLowLevel.getName() << endl;
+    proxyLowLevel.attack();              // первая атака — попытка создать
+    proxyLowLevel.attack();              // повторная атака — только сообщение об ошибке
+    proxyLowLevel.shadowStrike();        // попытка уникальной атаки
+    
+    // Игрок с уровнем 12 (достаточно)
+    cout << endl << "2. Игрок с уровнем 12:" << endl;
+    SecretCharacterProxy proxyHighLevel(12);
+    cout << "Имя персонажа: " << proxyHighLevel.getName() << endl;
+    proxyHighLevel.attack();             // первая атака — создаётся реальный объект и атакует
+    proxyHighLevel.attack();             // повторная атака — использует существующий объект
+    proxyHighLevel.shadowStrike();       // уникальное поведение доступно
+    
+    // Смена атаки для секретного персонажа
+    cout << endl << "3. Смена атаки для секретного персонажа:" << endl;
+    proxyHighLevel.setAttack(make_shared<IceAttack>());
+    proxyHighLevel.attack();             // атака льдом
+    
+    // Демонстрация того, что объект создаётся только один раз
+    cout << endl << "4. Повторный вызов с тем же прокси:" << endl;
+    proxyHighLevel.attack();             // использует уже существующий объект
+    
+    cout << endl << "=== Демонстрация завершена ===" << endl;
+    
+    return 0;
+}
