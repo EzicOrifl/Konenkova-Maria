@@ -1,0 +1,117 @@
+#include <iostream>
+#include <vector>
+#include <memory>
+#include <string>
+
+class IObserver {
+public:
+    virtual void onEvent(const std::string& event) = 0;
+    virtual ~IObserver() = default;
+};
+
+class ICharacter {
+protected:
+    std::vector<IObserver*> observers;
+
+public:
+    virtual ~ICharacter() = default;
+    
+    void subscribe(IObserver* obs) {
+        observers.push_back(obs);
+    }
+    
+protected:
+    void notify(const std::string& event) {
+        for (auto* obs : observers) {
+            obs->onEvent(event);
+        }
+    }
+    
+public:
+    virtual void attack() = 0;
+};
+
+class BattleLogger : public IObserver {
+public:
+    void onEvent(const std::string& event) override {
+        std::cout << "[LOG] " << event << std::endl;
+    }
+};
+
+class AttackCounter : public IObserver {
+private:
+    int count = 0;
+    
+public:
+    void onEvent(const std::string& event) override {
+        if (event.find("ATTACK") != std::string::npos) {
+            count++;
+            std::cout << "[COUNTER] " << count << std::endl;
+        }
+    }
+    
+    int getCount() const {
+        return count;
+    }
+};
+
+class Warrior : public ICharacter {
+public:
+    void attack() override {
+        notify("ATTACK: Warrior uses attack");
+    }
+};
+
+class Mage : public ICharacter {
+public:
+    void attack() override {
+        notify("ATTACK: Mage casts fireball");
+    }
+};
+
+class SecretCharacterProxy : public ICharacter {
+private:
+    std::shared_ptr<ICharacter> realCharacter;
+    int requiredLevel;
+    
+public:
+    SecretCharacterProxy(std::shared_ptr<ICharacter> real, int reqLevel)
+        : realCharacter(real), requiredLevel(reqLevel) {}
+    
+    void attack() override {
+        int level;
+        std::cin >> level;
+        
+        if (level >= requiredLevel) {
+            notify("ACCESS_GRANTED: secret character unlocked");
+            realCharacter->attack();
+        } else {
+            notify("ACCESS_DENIED: attempt at level " + std::to_string(level));
+        }
+    }
+};
+
+int main() {
+    auto logger = std::make_shared<BattleLogger>();
+    auto counter = std::make_shared<AttackCounter>();
+    
+    auto warrior = std::make_shared<Warrior>();
+    auto mage = std::make_shared<Mage>();
+    
+    auto secretMage = std::make_shared<Mage>();
+    auto proxy = std::make_shared<SecretCharacterProxy>(secretMage, 7);
+    
+    warrior->subscribe(logger.get());
+    warrior->subscribe(counter.get());
+    warrior->attack();
+    
+    mage->subscribe(logger.get());
+    mage->attack();
+    
+    proxy->subscribe(logger.get());
+    proxy->attack();
+    
+    warrior->attack();
+    
+    return 0;
+}
