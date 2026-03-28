@@ -1,0 +1,161 @@
+#include <iostream>
+#include <vector>
+#include <memory>
+#include <string>
+
+// ========== 1. Интерфейс наблюдателя ==========
+class IObserver {
+public:
+    virtual void onEvent(const std::string& event) = 0;
+    virtual ~IObserver() = default;
+};
+
+// ========== 2. Интерфейс персонажа с поддержкой наблюдателей ==========
+class ICharacter {
+protected:
+    std::vector<IObserver*> observers;  // Список наблюдателей
+
+public:
+    virtual ~ICharacter() = default;
+    
+    // Подписка наблюдателя
+    void subscribe(IObserver* obs) {
+        observers.push_back(obs);
+    }
+    
+    // Защищенный метод для уведомления всех подписчиков
+    void notify(const std::string& event) {
+        for (auto* obs : observers) {
+            obs->onEvent(event);
+        }
+    }
+    
+    // Чисто виртуальный метод атаки (должен быть реализован в наследниках)
+    virtual void attack() = 0;
+};
+
+// ========== 3. Конкретные наблюдатели ==========
+
+// Логгер боя
+class BattleLogger : public IObserver {
+public:
+    void onEvent(const std::string& event) override {
+        std::cout << "[LOG] " << event << std::endl;
+    }
+};
+
+// Счетчик атак
+class AttackCounter : public IObserver {
+private:
+    int count = 0;
+    
+public:
+    void onEvent(const std::string& event) override {
+        // Увеличиваем счетчик только для событий атаки
+        if (event.find("ATTACK") != std::string::npos) {
+            count++;
+            std::cout << "[COUNTER] Атак зафиксировано: " << count << std::endl;
+        } else {
+            // Для других событий просто выводим уведомление, не увеличивая счетчик
+            std::cout << "[COUNTER] Событие: " << event << std::endl;
+        }
+    }
+    
+    int getCount() const {
+        return count;
+    }
+};
+
+// ========== 4. Конкретные классы персонажей ==========
+
+class Warrior : public ICharacter {
+private:
+    std::string name;
+    
+public:
+    Warrior(const std::string& n) : name(n) {}
+    
+    void attack() override {
+        std::cout << name << " наносит удар мечом!" << std::endl;
+        notify("ATTACK: Воин " + name + " использует атаку");
+    }
+};
+
+class Mage : public ICharacter {
+private:
+    std::string name;
+    
+public:
+    Mage(const std::string& n) : name(n) {}
+    
+    void attack() override {
+        std::cout << name << " произносит огненное заклинание!" << std::endl;
+        notify("ATTACK: Маг " + name + " колдует огненный шар");
+    }
+};
+
+// Прокси для секретного персонажа
+class SecretCharacterProxy : public ICharacter {
+private:
+    std::shared_ptr<ICharacter> realCharacter;  // Реальный секретный персонаж
+    int requiredLevel;                           // Требуемый уровень доступа
+    
+public:
+    SecretCharacterProxy(std::shared_ptr<ICharacter> real, int reqLevel)
+        : realCharacter(real), requiredLevel(reqLevel) {}
+    
+    void attack() override {
+        // Здесь должна быть логика проверки уровня доступа
+        // Для примера запросим уровень у пользователя
+        int level;
+        std::cout << "Введите ваш уровень доступа (1-10): ";
+        std::cin >> level;
+        
+        if (level >= requiredLevel) {
+            notify("ACCESS_GRANTED: секретный персонаж разблокирован (уровень " + std::to_string(level) + ")");
+            realCharacter->attack();  // Делегируем атаку реальному персонажу
+        } else {
+            notify("ACCESS_DENIED: попытка на уровне " + std::to_string(level) + 
+                   ", требуется " + std::to_string(requiredLevel));
+            std::cout << "Доступ запрещен! Недостаточный уровень." << std::endl;
+        }
+    }
+};
+
+// ========== 5. Демонстрация в main() ==========
+int main() {
+    std::cout << "=== Демонстрация паттерна Наблюдатель ===" << std::endl;
+    
+    // Создаем наблюдателей
+    auto logger = std::make_shared<BattleLogger>();
+    auto counter = std::make_shared<AttackCounter>();
+    
+    // Создаем персонажей
+    auto warrior = std::make_shared<Warrior>("Артас");
+    auto mage = std::make_shared<Mage>("Джайна");
+    
+    // Создаем секретного персонажа и прокси к нему
+    auto secretMage = std::make_shared<Mage>("Медив");
+    auto proxy = std::make_shared<SecretCharacterProxy>(secretMage, 7); // Требуется 7 уровень
+    
+    std::cout << "\n--- Тест 1: Подписка двух наблюдателей на воина ---" << std::endl;
+    warrior->subscribe(logger.get());
+    warrior->subscribe(counter.get());
+    warrior->attack();
+    
+    std::cout << "\n--- Тест 2: Маг подписан только на логгер ---" << std::endl;
+    mage->subscribe(logger.get());  // Только логгер
+    mage->attack();
+    
+    std::cout << "\n--- Тест 3: Прокси подписан только на логгер ---" << std::endl;
+    proxy->subscribe(logger.get()); // Один логгер следит за разными персонажами
+    proxy->attack();  // Попробуем получить доступ (введите уровень)
+    
+    std::cout << "\n--- Тест 4: Дополнительная проверка - воин атакует снова ---" << std::endl;
+    warrior->attack();  // Оба наблюдателя снова получат уведомление
+    
+    std::cout << "\n--- Итог ---" << std::endl;
+    std::cout << "Всего атак зафиксировано: " << counter->getCount() << std::endl;
+    
+    return 0;
+}
