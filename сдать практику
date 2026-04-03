@@ -1,0 +1,233 @@
+#include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
+
+// ========== Bridge: Implementation (как атакует) ==========
+class IAttack {
+public:
+    virtual void attack() = 0;
+    virtual ~IAttack() = default;
+};
+
+// Пример: атака мечом
+class SwordAttack : public IAttack {
+public:
+    void attack() override {
+        std::cout << "Удар мечом! Нанесено 50 урона!" << std::endl;
+    }
+};
+
+// TODO: Придумайте и реализуйте 2 своих класса атаки
+// Каждый должен выводить свой текст в методе attack()
+
+class FireballAttack : public IAttack {
+public:
+    void attack() override {
+        std::cout << "Огненный шар! Нанесено 80 урона!" << std::endl;
+    }
+};
+
+class StealthAttack : public IAttack {
+public:
+    void attack() override {
+        std::cout << "Атака из тени! Нанесено 60 урона!" << std::endl;
+    }
+};
+
+// ========== Observer ==========
+class IObserver {
+public:
+    virtual void onEvent(const std::string& event) = 0;
+    virtual ~IObserver() = default;
+};
+
+class BattleLogger : public IObserver {
+public:
+    void onEvent(const std::string& event) override {
+        std::cout << "[LOG] " << event << std::endl;
+    }
+};
+
+class AttackCounter : public IObserver {
+private:
+    int counter = 0;
+
+public:
+    void onEvent(const std::string& event) override {
+        counter++;
+        std::cout << "[COUNTER] Событий атаки: " << counter << std::endl;
+    }
+
+    int getCount() const {
+        return counter;
+    }
+};
+
+// ========== Bridge: Abstraction (кто атакует) ==========
+class ICharacter {
+protected:
+    std::vector<IObserver*> observers;
+
+public:
+    virtual void attack() = 0;
+    virtual ~ICharacter() = default;
+
+    void subscribe(IObserver* obs) {
+        observers.push_back(obs);
+    }
+
+protected:
+    void notify(const std::string& event) {
+        for (auto* obs : observers) {
+            obs->onEvent(event);
+        }
+    }
+};
+
+// Пример: Воин (может использовать любую атаку)
+class Warrior : public ICharacter {
+private:
+    std::unique_ptr<IAttack> attackImpl;
+    std::string name;
+
+public:
+    Warrior(std::unique_ptr<IAttack> atk)
+        : name("Воин"), attackImpl(std::move(atk)) {
+        std::cout << "Создан персонаж: " << name << std::endl;
+    }
+
+    void attack() override {
+        std::cout << name << " атакует! ";
+        attackImpl->attack();
+        notify("ATTACK: Воин использует атаку");
+    }
+};
+
+// TODO: Придумайте и реализуйте своего персонажа
+// Добавьте свое описание при создании
+
+class Mage : public ICharacter {
+private:
+    std::unique_ptr<IAttack> attackImpl;
+    std::string name;
+
+public:
+    Mage(std::unique_ptr<IAttack> atk)
+        : name("Маг"), attackImpl(std::move(atk)) {
+        std::cout << "Создан персонаж: " << name << std::endl;
+    }
+
+    void attack() override {
+        std::cout << name << " произносит заклинание! ";
+        attackImpl->attack();
+        notify("ATTACK: Маг использует заклинание");
+    }
+};
+
+// ========== SecretCharacter (реальный объект) ==========
+// TODO: Реализовать SecretCharacter
+// - Должен наследоваться от ICharacter
+// - В конструкторе выводить: " Секретный персонаж создан!"
+// - В attack() выводить: "️ Секретный агент атакует! " + вызов атаки
+
+class SecretCharacter : public ICharacter {
+private:
+    std::unique_ptr<IAttack> attackImpl;
+
+public:
+    SecretCharacter(std::unique_ptr<IAttack> atk)
+        : attackImpl(std::move(atk)) {
+        std::cout << "Секретный персонаж создан!" << std::endl;
+    }
+
+    void attack() override {
+        std::cout << "Секретный персонаж атакует! ";
+        attackImpl->attack();
+        notify("ATTACK: Секретный персонаж атакует");
+    }
+};
+
+// ========== Proxy для SecretCharacter ==========
+// TODO: Реализовать SecretCharacterProxy
+// - Должен реализовывать интерфейс ICharacter
+// - Хранить: int currentLevel, int requiredLevel = 10
+// - Хранить: std::unique_ptr<SecretCharacter> real
+// - Хранить: std::unique_ptr<IAttack> attackImpl (атака для секретного персонажа)
+// - В методе attack() проверять уровень
+// - Если уровень достаточный -> создать real и делегировать
+// - Если нет -> вывести сообщение об ошибке
+
+class SecretCharacterProxy : public ICharacter {
+private:
+    int currentLevel;
+    const int requiredLevel = 10;
+    std::unique_ptr<SecretCharacter> real;
+    std::unique_ptr<IAttack> attackImpl;
+
+public:
+    SecretCharacterProxy(int level, std::unique_ptr<IAttack> atk)
+        : currentLevel(level), attackImpl(std::move(atk)) {
+        std::cout << "Создан прокси для секретного персонажа (уровень: "
+                  << currentLevel << ")" << std::endl;
+    }
+
+    void attack() override {
+        if (currentLevel >= requiredLevel) {
+            notify("ACCESS_GRANTED: секретный персонаж разблокирован");
+            if (!real) {
+                real = std::make_unique<SecretCharacter>(std::move(attackImpl));
+
+                for (auto* obs : observers) {
+                    real->subscribe(obs);
+                }
+            }
+            real->attack();
+        } else {
+            std::string errorMsg = "ACCESS_DENIED: попытка на уровне " + std::to_string(currentLevel);
+            notify(errorMsg);
+            std::cout << "Ошибка: недостаточный уровень! Текущий уровень: "
+                      << currentLevel << ", требуется: " << requiredLevel << std::endl;
+        }
+    }
+};
+
+
+int main() {
+  
+    auto logger = std::make_shared<BattleLogger>();
+    auto counter = std::make_shared<AttackCounter>();
+
+   
+    auto warrior = std::make_unique<Warrior>(std::make_unique<SwordAttack>());
+    warrior->subscribe(logger.get());
+    warrior->subscribe(counter.get());
+    warrior->attack();
+
+    std::cout << std::endl;
+
+
+    auto mage = std::make_unique<Mage>(std::make_unique<FireballAttack>());
+    mage->subscribe(logger.get());
+    mage->attack();
+
+
+    std::cout << "--- Попытка 1: Уровень 5 ---" << std::endl;
+    auto proxy1 = std::make_unique<SecretCharacterProxy>(5, std::make_unique<StealthAttack>());
+    proxy1->subscribe(logger.get());
+    proxy1->subscribe(counter.get());
+    proxy1->attack();
+
+    std::cout << "\n--- Попытка 2: Уровень 12 ---" << std::endl;
+    auto proxy2 = std::make_unique<SecretCharacterProxy>(12, std::make_unique<StealthAttack>());
+    proxy2->subscribe(logger.get());
+    proxy2->subscribe(counter.get());
+    proxy2->attack();
+
+    proxy2->attack();
+
+
+    std::cout << "Общее количество атак по счётчику: " << counter->getCount() << std::endl;
+
+    return 0;
+}
